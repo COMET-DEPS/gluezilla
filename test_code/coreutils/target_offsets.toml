@@ -1,0 +1,18 @@
+# IMPORTANT! These offsets might be different on your system!
+
+[[sections]]
+name = ".dbl_text"
+
+#ls
+#values = [
+#    {type = "none", offset = 0x0},
+#    {type = "fixed", offset = 0x3673, bit = 0, sign = '+'}, # movl  $1, %eax -> movl  $1, %ecx
+#    {type = "range", start_offset = 0x36cf, range = 4, normal_dest = 0x3845, flipped_dest = 0x36d3}, # jmp 0x407845 -> jmp 0x4076d3
+#    {type = "fixed", offset = 0x377b, bit = 1, sign = '-'}, # addq  $2, %rdi -> addq  $0, %rdi
+#]
+
+#cp
+#values = [
+#    {type = "none", offset = 0x0},
+#    {type = "range", start_offset = 0x157a, range = 4, normal_dest = 0x8440, flipped_dest = 0x200a}, # e8 c2 6e 00 00 : callq 0x40c440 <rm>
+#]

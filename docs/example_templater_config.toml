@@ -1,0 +1,23 @@
+# `row_start` and `row_end` denote the range of accessed rows (including the aggressor rows) => no row outside the [row_start, row_end[ interval are accessed for anything
+row_start = 10000
+row_end = 10010 # Exclusive
+bank_idxs = [5,2] # The indices of the banks to template
+hammer_count = 1_000_000
+# The "optimal" (i.e., most bitflips) amount of garbage inserted is uarch-dependent (OoOE, etc.)
+# For me, templating with garbage 40 (garbage_count_start=40, garbage_count_end=41) gave the best results
+garbage_count_start = 1 # This should not be 0 when using hammer_asm
+garbage_count_end = 70 # Exclusive
+drop_frac = 0.01 # Fraction of physical page frames, in the given row/bank region, that is allowed to stay unallocated, e.g., useful if some page frames in the desired region are already allocated by another process. This is an absolute fraction, not a percentage. The templater will skip iterations with missing rows
+repetition = 1 # Number of templating iterations (experiment rounds) with the settings in this whole file
+pattern = "AVA" # AVA = double-sided hammering, can be used to do N-sided hammering
+
+# `init_values` is an array with different init values to try
+[[init_values]] # Do a templating round where all victim rows are initialized on 0x00 and the aggressors on 0xff
+victim_init = 0x00
+aggr_init = 0xff
+
+[[init_values]] # Do a templating round where all victim rows are initialized on 0xff and the aggressors on 0x00
+victim_init = 0xff
+aggr_init = 0x00
+
+

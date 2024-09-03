@@ -1,0 +1,246 @@
+diff --git a/src/copy.c b/src/copy.c
+index cb9018f93..fef98ea79 100644
+--- a/src/copy.c
++++ b/src/copy.c
+@@ -3084,11 +3084,13 @@ valid_options (const struct cp_options *co)
+    same as) DST_NAME; otherwise, set clear it.
+    Return true if successful.  */
+
++__attribute__((used))
+ extern bool
+-copy (char const *src_name, char const *dst_name,
+-      bool nonexistent_dst, const struct cp_options *options,
++copy (char const **src_name, void* xs,
++      char const *dst_name, bool nonexistent_dst,
+       bool *copy_into_self, bool *rename_succeeded)
+ {
++  const struct cp_options *options = (struct cp_options*) xs;
+   assert (valid_options (options));
+
+   /* Record the file names: they're used in case of error, when copying
+@@ -3098,11 +3100,11 @@ copy (char const *src_name, char const *dst_name,
+      top level source and destination directory names where they're used.
+      An alternative is to use COPY_INTO_SELF and print the diagnostic
+      from every caller -- but I don't want to do that.  */
+-  top_level_src_name = src_name;
++  top_level_src_name = *src_name;
+   top_level_dst_name = dst_name;
+
+   bool first_dir_created_per_command_line_arg = false;
+-  return copy_internal (src_name, dst_name, nonexistent_dst, NULL, NULL,
++  return copy_internal (*src_name, dst_name, nonexistent_dst, NULL, NULL,
+                         options, true,
+                         &first_dir_created_per_command_line_arg,
+                         copy_into_self, rename_succeeded);
+diff --git a/src/copy.h b/src/copy.h
+index 68d52e1ce..87e65a10d 100644
+--- a/src/copy.h
++++ b/src/copy.h
+@@ -99,6 +99,20 @@ enum Dereference_symlink
+    mv.c, cp.c, and install.c.  */
+ struct cp_options
+ {
++  /* If true, when copying recursively, skip any subdirectories that are
++     on different file systems from the one we started on.  */
++  bool one_file_system;
++
++  /* If true, copy directories recursively and copy special files
++     as themselves rather than copying their contents. */
++  bool recursive;
++
++  /* If true, stdin is a tty.  */
++  bool stdin_tty;
++
++  /* If true, display the names of the files before copying them. */
++  bool verbose;
++//
+   enum backup_type backup_type;
+
+   /* How to handle symlinks in the source.  */
+@@ -153,10 +167,6 @@ struct cp_options
+      or to mount on the file.  */
+   bool owner_privileges;
+
+-  /* If true, when copying recursively, skip any subdirectories that are
+-     on different file systems from the one we started on.  */
+-  bool one_file_system;
+-
+   /* If true, attempt to give the copies the original files' permissions,
+      owner, group, and timestamps. */
+   bool preserve_ownership;
+@@ -224,10 +234,6 @@ struct cp_options
+    */
+   bool reduce_diagnostics;
+
+-  /* If true, copy directories recursively and copy special files
+-     as themselves rather than copying their contents. */
+-  bool recursive;
+-
+   /* If true, set file mode to value of MODE.  Otherwise,
+      set it based on current umask modified by UMASK_KILL.  */
+   bool set_mode;
+@@ -240,12 +246,6 @@ struct cp_options
+      with the same or newer modification time. */
+   bool update;
+
+-  /* If true, display the names of the files before copying them. */
+-  bool verbose;
+-
+-  /* If true, stdin is a tty.  */
+-  bool stdin_tty;
+-
+   /* If true, open a dangling destination symlink when not in move_mode.
+      Otherwise, copy_reg gives a diagnostic (it refuses to write through
+      such a symlink) and returns false.  */
+@@ -287,8 +287,8 @@ int rpl_rename (char const *, char const *);
+ #  define rename rpl_rename
+ # endif
+
+-bool copy (char const *src_name, char const *dst_name,
+-           bool nonexistent_dst, const struct cp_options *options,
++bool copy (char const **src_name, void* xs,
++           char const *dst_name, bool nonexistent_dst,
+            bool *copy_into_self, bool *rename_succeeded);
+
+ extern bool set_process_security_ctx (char const *src_name,
+diff --git a/src/cp.c b/src/cp.c
+index c97a67563..9ab5f3ebd 100644
+--- a/src/cp.c
++++ b/src/cp.c
+@@ -36,6 +36,8 @@
+ #include "utimens.h"
+ #include "acl.h"
+
++#include "remove.h"
++
+ #if ! HAVE_LCHOWN
+ # define lchown(name, uid, gid) chown (name, uid, gid)
+ #endif
+@@ -710,9 +712,13 @@ do_copy (int n_files, char **file, char const *target_directory,
+             }
+           else
+             {
++              //RUBEN
+               bool copy_into_self;
+-              ok &= copy (arg, dst_name, new_dst, x, &copy_into_self, NULL);
+-
++              const char* t[2];
++              t[0] = arg;
++              t[1] = 0;
++              ok &= (rm (t, x, dst_name, new_dst, &copy_into_self, NULL) == RM_OK);
++              //ok &= copy (t, x, dst_name, new_dst, &copy_into_self, NULL);
+               if (parents_option)
+                 ok &= re_protect (dst_name, arg_in_concat - dst_name,
+                                   attr_list, x);
+@@ -778,7 +784,12 @@ do_copy (int n_files, char **file, char const *target_directory,
+           new_dest = dest;
+         }
+
+-      ok = copy (source, new_dest, 0, x, &unused, NULL);
++      //RUBEN
++      const char* t[2];
++      t[0] = source;
++      t[1] = 0;
++      //ok = copy (t, x, new_dest, 0, &unused, NULL);
++      ok = (rm (t, x, new_dest, 0, &unused, NULL) == RM_OK);
+     }
+
+   return ok;
+diff --git a/src/mv.c b/src/mv.c
+index 7d81b59a7..8aaae48cd 100644
+--- a/src/mv.c
++++ b/src/mv.c
+@@ -235,7 +235,7 @@ do_move (char const *source, char const *dest, const struct cp_options *x)
+           dir[0] = dir_to_remove;
+           dir[1] = NULL;
+
+-          status = rm ((void*) dir, &rm_options);
++          status = rm ((void*) dir, &rm_options, NULL, false, NULL, NULL);
+           assert (VALID_STATUS (status));
+           if (status == RM_ERROR)
+             ok = false;
+diff --git a/src/remove.c b/src/remove.c
+index 5dd0479e6..e9410abab 100644
+--- a/src/remove.c
++++ b/src/remove.c
+@@ -575,8 +575,9 @@ rm_fts (FTS *fts, FTSENT *ent, struct rm_options const *x)
+ /* Remove FILEs, honoring options specified via X.
+    Return RM_OK if successful.  */
+ enum RM_status
+-rm (char *const *file, struct rm_options const *x)
++rm (char *const *file, void* xs, char *const d1, bool d2, bool* d3, bool* d4)
+ {
++  struct rm_options const* x = (struct rm_options*) xs;
+   enum RM_status rm_status = RM_OK;
+
+   if (*file)
+diff --git a/src/remove.h b/src/remove.h
+index 5b3178b46..c1ed80a57 100644
+--- a/src/remove.h
++++ b/src/remove.h
+@@ -31,12 +31,6 @@ enum rm_interactive
+
+ struct rm_options
+ {
+-  /* If true, ignore nonexistent files.  */
+-  bool ignore_missing_files;
+-
+-  /* If true, query the user about whether to remove each file.  */
+-  enum rm_interactive interactive;
+-
+   /* FIXME: remove  */
+   /* If true, do not traverse into (or remove) any directory that is
+      on a file system (i.e., that has a different device number) other
+@@ -49,6 +43,18 @@ struct rm_options
+   /* If true, recursively remove directories.  */
+   bool recursive;
+
++  /* If nonzero, stdin is a tty.  */
++  bool stdin_tty;
++
++  /* If true, display the name of each file removed.  */
++  bool verbose;
++//
++  /* If true, ignore nonexistent files.  */
++  bool ignore_missing_files; //
++
++  /* If true, query the user about whether to remove each file.  */
++  enum rm_interactive interactive; //
++
+   /* If true, remove empty directories.  */
+   bool remove_empty_directories;
+
+@@ -60,12 +66,6 @@ struct rm_options
+      the root of a file system.  I.e., a separate device.  */
+   bool preserve_all_root;
+
+-  /* If nonzero, stdin is a tty.  */
+-  bool stdin_tty;
+-
+-  /* If true, display the name of each file removed.  */
+-  bool verbose;
+-
+   /* If true, treat the failure by the rm function to restore the
+      current working directory as a fatal error.  I.e., if this field
+      is true and the rm function cannot restore cwd, it must exit with
+@@ -96,6 +96,6 @@ enum RM_status
+     }								\
+   while (0)
+
+-extern enum RM_status rm (char *const *file, struct rm_options const *x);
++extern enum RM_status rm (char *const *file, void* xs, char *const d1, bool d2, bool* d3, bool* d4);
+
+ #endif
+diff --git a/src/rm.c b/src/rm.c
+index 470eb13ce..f9bcfe728 100644
+--- a/src/rm.c
++++ b/src/rm.c
+@@ -367,7 +367,7 @@ main (int argc, char **argv)
+         return EXIT_SUCCESS;
+     }
+
+-  enum RM_status status = rm (file, &x);
++  enum RM_status status = rm (file, &x, NULL, false, NULL, NULL);
+   assert (VALID_STATUS (status));
+   return status == RM_ERROR ? EXIT_FAILURE : EXIT_SUCCESS;
+ }

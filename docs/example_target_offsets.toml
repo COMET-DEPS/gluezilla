@@ -1,0 +1,33 @@
+# [[sections]] contains the sections in which we want to flips bits. For now, only the `.dbl_text` section is supported (so no flips in data sections yet)
+# Each entry in the `values` array specifies where we want a flip to happen
+# There are 3 types of enties:
+#   none: no targets. You have to use the start of the file (offset 0) somewhere in this file. If the start of the file is not used in any other entry, you have to put an `none` entry at the start
+#   fixed: used to describe the specific bit you want to flip (in the paper, we call this an unmovable junction instruction)
+#       `bit` is the bit offset in the target byte
+#       `sign` indicates the required flip direction
+#   range: used to specify that you want to flip some bit somewhere in an immediate operand (denoting a relative offsets, no absolute addresses!) of a jump/call instruction so that control flow after the flip jumps to a specified piece of code (in the paper, we call this a movable junction instruction)
+#       `normal_dest` is the offset to the code the jump/call takes without the flip
+#       `flipped_dest` is the offset to the code the jump/call takes after the flip
+#       `range` is the width (in bytes) of the immediate operand (usually 4 bytes) (any other width is unsupported but the custom compiler is set to emit all smaller offsets as 4 bytes)
+#       `start_offset` is the offset to the start of immediate operand inside the instruction, not to the start of the whole instruction!
+#       The compiler will determine where the 2 destinations are placed in the virtual address space, and will choose one of the jump/call offset bits according to the distance between
+# IMPORTANT: All "offsets" are byte offsets **with respect to the section start** (.dbl_text)
+
+
+[[sections]]
+name = ".dbl_text"
+
+#values = [
+#    {type = "none", offset = 0x0},
+#    {type = "fixed", offset = 0x22, bit = 0, sign = '+'}, # 0f 84 16 00 00 00 : je 20189d <old_main+0x3d>
+#    {type = "fixed", offset = 0x54, bit = 7, sign = '+'}, # c7 45 ec 07 00 00 00 : movl $0x7,-0x14(%rbp)
+#    {type = "fixed", offset = 0x7b, bit = 4, sign = '+'}  # 03 45 f8 : add -0x8(%rbp),%eax
+#]
+
+values = [
+    {type = "fixed", offset = 0x50, bit = 0, sign = '+'}, # 0f 84 16 00 00 00 : je 20189d <old_main+0x3d>
+    {type = "fixed", offset = 0x82, bit = 7, sign = '+'}, # c7 45 ec 07 00 00 00 : movl $0x7,-0x14(%rbp)
+    {type = "fixed", offset = 0xa9, bit = 4, sign = '+'}, # 03 45 f8 : add -0x8(%rbp),%eax
+    {type = "range", start_offset = 0xcf, range = 4, normal_dest = 0xe9, flipped_dest = 0xd3}, # 0f 84 16 00 00 00 : je 0x201909 <old_main+0xbb>
+    {type = "range", start_offset = 0xfb, range = 4, normal_dest = 0x0, flipped_dest = 0x17}, # e8 01 ff ff ff : callq 0x201820 <fn1>
+]

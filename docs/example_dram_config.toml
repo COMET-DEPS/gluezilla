@@ -1,0 +1,15 @@
+# Contains the exact mapping functions to be used for phys_addr to DRAM_addr translation
+
+# some arbitrary id
+dram_id = ""
+
+# 1,1,1,8
+#row_fn = 0x7fff0000
+#column_fn = 0x1fff
+#bank_fns = [0x12000,0x24000,0x48000]
+
+# 1,1,2,8
+row_fn = 0x7ffe0000
+column_fn = 0x1fff
+bank_fns = [0x22000,0x44000,0x88000,0x110000]
+

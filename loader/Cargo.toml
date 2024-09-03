@@ -1,0 +1,19 @@
+[package]
+name = "loader"
+version = "0.1.0"
+authors = ["Ruben Mechelinck <ruben.mechelinck@kuleuven.be>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+libc = "0.2.140"
+rowhammer = { path = "../rowhammer_tools" }
+log = "0.4.14"
+env_logger = "0.8.3"
+colored = "2.0.0"
+
+[lib]
+crate-type = ["cdylib"]
+path = "src/lib.rs"
+

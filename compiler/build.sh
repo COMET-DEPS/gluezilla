@@ -1,0 +1,37 @@
+#!/bin/bash
+
+COMPILER_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+BUILD_DIR=$COMPILER_DIR/compiler_build
+LLVM_SRC_DIR=$COMPILER_DIR/llvm-11.1.0.src
+
+cd $COMPILER_DIR
+mkdir -p $BUILD_DIR
+cd $BUILD_DIR
+
+# Build
+cmake -G "Ninja" -DCMAKE_BUILD_TYPE=Debug \
+    -DCMAKE_C_COMPILER=clang \
+    -DCMAKE_CXX_COMPILER=clang++ \
+    -DCMAKE_CXX_STANDARD=17 \
+    -DLLVM_ENABLE_ASSERTIONS=ON \
+    -DLLVM_BUILD_TESTS=OFF \
+    -DLLVM_BUILD_EXAMPLES=OFF \
+    -DLLVM_INCLUDE_TESTS=OFF \
+    -DLLVM_INCLUDE_EXAMPLES=OFF \
+    -DLLVM_TARGETS_TO_BUILD="X86" \
+    -DLLVM_ENABLE_LTO=OFF \
+    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+    -DLLVM_BUILD_TOOLS=OFF \
+    -DLLVM_PARALLEL_LINK_JOBS=10 \
+    -DLLVM_BINUTILS_INCDIR=/usr/include \
+    -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=ON \
+    $LLVM_SRC_DIR
+    #-DBUILD_SHARED_LIBS=ON \
+
+cp compile_commands.json $LLVM_SRC_DIR
+
+cmake --build . #-- -v
+
+
+
+

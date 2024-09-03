@@ -1,0 +1,24 @@
+# This file contains multiple sets of mapping functions used for phys_addr to DRAM_addr translation
+# When this file is present, the tools will select appropriate functions based on the detected system configuration using the `decode-dimms` program
+# When in doubt, it is safer to not provide this file and use a `dram_config.toml` file instead, which contains only the desired mapping functions for your particular test system
+
+[dram_ids]
+# assembly serial number -> arbitrary smaller id
+# DDR3
+0x13137F8B = "#1"
+0xD0225B8F = "#2"
+0xCD225A8F = "#3"
+0x2C107B5D = "#6"
+0x196746FC = "#17"
+0x45098DF5 = "#18"
+
+[mapping_functions."DDR3.1.1.1.8"]
+row_fn = 0x7fff0000
+column_fn = 0x1fff
+bank_fns = [0x12000,0x24000,0x48000]
+
+[mapping_functions."DDR3.1.1.2.8"]
+row_fn = 0x7ffe0000
+column_fn = 0x1fff
+bank_fns = [0x22000,0x44000,0x88000,0x110000]
+
